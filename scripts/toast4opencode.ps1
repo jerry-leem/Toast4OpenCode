@@ -45,13 +45,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
+$script:ToastAppId = "JerryLeem.Toast4OpenCode"
 
 if (-not ("Toast4OpenCode.Win32" -as [type])) {
     Add-Type -TypeDefinition @"
 using System;
+using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.InteropServices;
 
 namespace Toast4OpenCode {
@@ -77,6 +76,102 @@ namespace Toast4OpenCode {
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
+    }
+
+    [ComImport, Guid("00021401-0000-0000-C000-000000000046")]
+    public class CShellLink
+    {
+    }
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("000214F9-0000-0000-C000-000000000046")]
+    public interface IShellLinkW
+    {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile, int cchMaxPath, IntPtr pfd, uint fFlags);
+        void GetIDList(out IntPtr ppidl);
+        void SetIDList(IntPtr pidl);
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszName, int cchMaxName);
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName);
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszDir, int cchMaxPath);
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir);
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszArgs, int cchMaxPath);
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs);
+        void GetHotkey(out short pwHotkey);
+        void SetHotkey(short wHotkey);
+        void GetShowCmd(out int piShowCmd);
+        void SetShowCmd(int iShowCmd);
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszIconPath, int cchIconPath, out int piIcon);
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon);
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, uint dwReserved);
+        void Resolve(IntPtr hwnd, uint fFlags);
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
+    }
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
+    public interface IPropertyStore
+    {
+        uint GetCount(out uint cProps);
+        uint GetAt(uint iProp, out PROPERTYKEY pkey);
+        uint GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
+        uint SetValue(ref PROPERTYKEY key, ref PROPVARIANT pv);
+        uint Commit();
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    public struct PROPERTYKEY
+    {
+        public Guid fmtid;
+        public uint pid;
+
+        public PROPERTYKEY(Guid formatId, uint propertyId)
+        {
+            fmtid = formatId;
+            pid = propertyId;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PROPVARIANT
+    {
+        public ushort vt;
+        public ushort wReserved1;
+        public ushort wReserved2;
+        public ushort wReserved3;
+        public IntPtr p;
+        public int p2;
+    }
+
+    public static class ShortcutHelper
+    {
+        private static readonly PROPERTYKEY AppIdKey = new PROPERTYKEY(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
+
+        [DllImport("ole32.dll", PreserveSig = false)]
+        private static extern void PropVariantClear(ref PROPVARIANT pvar);
+
+        public static void CreateShortcut(string shortcutPath, string targetPath, string arguments, string workingDirectory, string description, string appId, string iconPath)
+        {
+            var shellLink = (IShellLinkW)new CShellLink();
+            shellLink.SetPath(targetPath);
+            shellLink.SetArguments(arguments);
+            shellLink.SetWorkingDirectory(workingDirectory);
+            shellLink.SetDescription(description);
+            shellLink.SetIconLocation(iconPath, 0);
+
+            var propertyStore = (IPropertyStore)shellLink;
+            var appIdVariant = new PROPVARIANT();
+            appIdVariant.vt = 31;
+            appIdVariant.p = Marshal.StringToCoTaskMemUni(appId);
+
+            try
+            {
+                propertyStore.SetValue(ref AppIdKey, ref appIdVariant);
+                propertyStore.Commit();
+                ((IPersistFile)shellLink).Save(shortcutPath, true);
+            }
+            finally
+            {
+                PropVariantClear(ref appIdVariant);
+            }
+        }
     }
 }
 "@
@@ -229,18 +324,7 @@ function Invoke-TaskbarFlash {
     return $true
 }
 
-function Get-TooltipIcon {
-    param([string]$EventName)
-
-    switch ($EventName) {
-        "error" { return [System.Windows.Forms.ToolTipIcon]::Error }
-        "permission" { return [System.Windows.Forms.ToolTipIcon]::Warning }
-        "input" { return [System.Windows.Forms.ToolTipIcon]::Warning }
-        default { return [System.Windows.Forms.ToolTipIcon]::Info }
-    }
-}
-
-function Play-NotificationSound {
+function Get-SoundUri {
     param(
         [string]$SoundName,
         [bool]$SoundEnabled,
@@ -248,47 +332,151 @@ function Play-NotificationSound {
     )
 
     if ($SilentRequested -or -not $SoundEnabled) {
-        return
+        return $null
     }
 
     switch ($SoundName) {
-        { $_ -in @("Alarm", "Alarm2", "Alarm3", "Alarm4", "Alarm5", "Alarm6", "Alarm7", "Alarm8", "Alarm9", "Alarm10", "Call", "Call2", "Call3", "Call4", "Call5", "Call6", "Call7", "Call8", "Call9", "Call10") } {
-            [System.Media.SystemSounds]::Hand.Play()
-            return
-        }
-        { $_ -in @("Reminder", "Mail", "SMS") } {
-            [System.Media.SystemSounds]::Asterisk.Play()
-            return
-        }
-        { $_ -in @("IM", "Default") } {
-            [System.Media.SystemSounds]::Beep.Play()
-            return
-        }
-        default {
-            [System.Media.SystemSounds]::Exclamation.Play()
-            return
-        }
+        "Default" { return "ms-winsoundevent:Notification.Default" }
+        "IM" { return "ms-winsoundevent:Notification.IM" }
+        "Mail" { return "ms-winsoundevent:Notification.Mail" }
+        "Reminder" { return "ms-winsoundevent:Notification.Reminder" }
+        "SMS" { return "ms-winsoundevent:Notification.SMS" }
+        "Alarm" { return "ms-winsoundevent:Notification.Looping.Alarm" }
+        "Alarm2" { return "ms-winsoundevent:Notification.Looping.Alarm2" }
+        "Alarm3" { return "ms-winsoundevent:Notification.Looping.Alarm3" }
+        "Alarm4" { return "ms-winsoundevent:Notification.Looping.Alarm4" }
+        "Alarm5" { return "ms-winsoundevent:Notification.Looping.Alarm5" }
+        "Alarm6" { return "ms-winsoundevent:Notification.Looping.Alarm6" }
+        "Alarm7" { return "ms-winsoundevent:Notification.Looping.Alarm7" }
+        "Alarm8" { return "ms-winsoundevent:Notification.Looping.Alarm8" }
+        "Alarm9" { return "ms-winsoundevent:Notification.Looping.Alarm9" }
+        "Alarm10" { return "ms-winsoundevent:Notification.Looping.Alarm10" }
+        "Call" { return "ms-winsoundevent:Notification.Looping.Call" }
+        "Call2" { return "ms-winsoundevent:Notification.Looping.Call2" }
+        "Call3" { return "ms-winsoundevent:Notification.Looping.Call3" }
+        "Call4" { return "ms-winsoundevent:Notification.Looping.Call4" }
+        "Call5" { return "ms-winsoundevent:Notification.Looping.Call5" }
+        "Call6" { return "ms-winsoundevent:Notification.Looping.Call6" }
+        "Call7" { return "ms-winsoundevent:Notification.Looping.Call7" }
+        "Call8" { return "ms-winsoundevent:Notification.Looping.Call8" }
+        "Call9" { return "ms-winsoundevent:Notification.Looping.Call9" }
+        "Call10" { return "ms-winsoundevent:Notification.Looping.Call10" }
+        default { return "ms-winsoundevent:Notification.Default" }
     }
 }
 
-function Show-WindowsNotification {
+function Ensure-ToastShortcut {
+    $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+    $shortcutDirectory = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
+    $shortcutPath = Join-Path $shortcutDirectory "Toast4OpenCode.lnk"
+    $targetPath = Join-Path $repoRoot "toast4opencode.cmd"
+
+    if (-not (Test-Path -LiteralPath $shortcutDirectory)) {
+        New-Item -ItemType Directory -Path $shortcutDirectory -Force | Out-Null
+    }
+
+    [Toast4OpenCode.ShortcutHelper]::CreateShortcut(
+        $shortcutPath,
+        $targetPath,
+        "",
+        $repoRoot,
+        "Toast4OpenCode Windows notifications",
+        $script:ToastAppId,
+        $targetPath
+    )
+}
+
+function Show-WindowsToast {
     param(
         [string]$NotificationTitle,
         [string]$NotificationMessage,
-        [string]$EventName
+        [string]$EventName,
+        [string]$SoundName,
+        [bool]$SoundEnabled,
+        [bool]$SilentRequested
     )
 
-    $notifyIcon = New-Object System.Windows.Forms.NotifyIcon
-    $notifyIcon.Icon = [System.Drawing.SystemIcons]::Information
-    $notifyIcon.BalloonTipIcon = Get-TooltipIcon -EventName $EventName
-    $notifyIcon.BalloonTipTitle = $NotificationTitle
-    $notifyIcon.BalloonTipText = $NotificationMessage
-    $notifyIcon.Text = "Toast4OpenCode"
-    $notifyIcon.Visible = $true
-    $notifyIcon.ShowBalloonTip(3000)
+    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
+    [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
+    [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] > $null
 
-    Start-Sleep -Milliseconds 3500
-    $notifyIcon.Dispose()
+    Ensure-ToastShortcut
+
+    $escapedTitle = [System.Security.SecurityElement]::Escape($NotificationTitle)
+    $escapedMessage = [System.Security.SecurityElement]::Escape($NotificationMessage)
+    $soundUri = Get-SoundUri -SoundName $SoundName -SoundEnabled $SoundEnabled -SilentRequested $SilentRequested
+
+    if ($null -eq $soundUri) {
+        $audioNode = '<audio silent="true"/>'
+    }
+    else {
+        $audioNode = '<audio src="' + $soundUri + '"/>'
+    }
+
+    $toastXmlString = @"
+<toast>
+  <visual>
+    <binding template="ToastGeneric">
+      <text>$escapedTitle</text>
+      <text>$escapedMessage</text>
+    </binding>
+  </visual>
+  $audioNode
+</toast>
+"@
+
+    $toastXml = [Windows.Data.Xml.Dom.XmlDocument]::new()
+    $toastXml.LoadXml($toastXmlString)
+
+    $toast = [Windows.UI.Notifications.ToastNotification]::new($toastXml)
+    $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($script:ToastAppId)
+    $notifier.Show($toast)
+}
+
+function Show-LegacyNotification {
+    param(
+        [string]$NotificationTitle,
+        [string]$NotificationMessage
+    )
+
+    try {
+        [void][reflection.assembly]::LoadWithPartialName("System.Windows.Forms")
+        [void][reflection.assembly]::LoadWithPartialName("System.Drawing")
+
+        $notifyIcon = New-Object System.Windows.Forms.NotifyIcon
+        $notifyIcon.Icon = [System.Drawing.SystemIcons]::Information
+        $notifyIcon.BalloonTipTitle = $NotificationTitle
+        $notifyIcon.BalloonTipText = $NotificationMessage
+        $notifyIcon.Text = "Toast4OpenCode"
+        $notifyIcon.Visible = $true
+        $notifyIcon.ShowBalloonTip(3000)
+        Start-Sleep -Milliseconds 3500
+        $notifyIcon.Dispose()
+    }
+    catch {
+        throw
+    }
+}
+
+function Send-WindowsNotification {
+    param(
+        [string]$NotificationTitle,
+        [string]$NotificationMessage,
+        [string]$EventName,
+        [string]$SoundName,
+        [bool]$SoundEnabled,
+        [bool]$SilentRequested
+    )
+
+    try {
+        Show-WindowsToast -NotificationTitle $NotificationTitle -NotificationMessage $NotificationMessage -EventName $EventName -SoundName $SoundName -SoundEnabled $SoundEnabled -SilentRequested $SilentRequested
+    }
+    catch {
+        Show-LegacyNotification -NotificationTitle $NotificationTitle -NotificationMessage $NotificationMessage
+        if (-not $SilentRequested -and $SoundEnabled) {
+            [System.Media.SystemSounds]::Beep.Play()
+        }
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
@@ -324,8 +512,7 @@ try {
         $Sound = $defaults.Sound
     }
 
-    Play-NotificationSound -SoundName $Sound -SoundEnabled $soundEnabled -SilentRequested $Silent.IsPresent
-    Show-WindowsNotification -NotificationTitle $Title -NotificationMessage $Message -EventName $Event
+    Send-WindowsNotification -NotificationTitle $Title -NotificationMessage $Message -EventName $Event -SoundName $Sound -SoundEnabled $soundEnabled -SilentRequested $Silent.IsPresent
 
     if ($taskbarFlashEnabled) {
         [void](Invoke-TaskbarFlash)
