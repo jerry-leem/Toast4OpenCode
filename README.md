@@ -2,7 +2,12 @@
 
 Windows toast notifications for OpenCode using [BurntToast](https://github.com/Windos/BurntToast). The project is built around one PowerShell script and thin launchers for PowerShell, `cmd.exe`, and WSL2.
 
-## 한국어 안내
+## Language Guide
+
+- Korean guide: [한국어 안내](#korean-guide--한국어-안내)
+- English guide: [English Guide](#english-guide)
+
+## Korean Guide / 한국어 안내
 
 `Toast4OpenCode`는 Windows에서 OpenCode 작업 상태를 토스트 알림으로 보여주는 도구입니다. 실제 알림 표시는 PowerShell용 BurntToast 모듈이 담당하고, 이 저장소는 같은 기능을 PowerShell, `cmd.exe`, WSL2에서 공통으로 호출할 수 있게 구성되어 있습니다.
 
@@ -240,6 +245,10 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 - WSL2에서 저장소를 사용할 때는 `/mnt/c/...` 같은 Windows 접근 가능 경로에 두는 편이 안전합니다.
 - `sound` 가 `false` 이면 일반 알림도 무음으로 전송되고 `sound` 이벤트도 사실상 비활성화됩니다.
 
+---
+
+## English Guide
+
 ## Features
 
 - Completion, error, permission-request, input-needed, and sound alert notifications
@@ -294,6 +303,27 @@ Get-Module BurntToast -ListAvailable
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
+
+Notes:
+
+- This step is not always required.
+- Apply it when PowerShell blocks `toast4opencode.ps1` and you see messages such as `running scripts is disabled on this system`.
+- The same policy restriction can also affect `toast4opencode.cmd` and OpenCode hooks because they eventually invoke a PowerShell script.
+- If PowerShell scripts already run correctly in your environment, you can skip this step.
+- The example uses `-Scope CurrentUser`, so it affects only the current Windows user and does not change the machine-wide policy.
+- `RemoteSigned` is a practical default: locally created scripts can run, while downloaded scripts are treated more strictly.
+
+When you should do this:
+
+- Your first `pwsh -File ...\toast4opencode.ps1 complete` test fails with an execution-policy error
+- OpenCode hooks are configured, but notifications never appear because the underlying PowerShell script is blocked
+- `cmd.exe` or WSL2 wrappers launch, but fail when the PowerShell stage starts
+
+When you may not need it:
+
+- `pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File ...` already works in your environment
+- Your organization manages PowerShell execution policy and you should not override it
+- A suitable user or system policy is already configured
 
 ## `setting.json`
 
@@ -369,50 +399,119 @@ chmod +x ./toast4opencode
 
 ## OpenCode Examples
 
+For a typical Windows OpenCode CLI setup, the config files usually live under `C:\Users\<your-user>\.config\opencode\`. This section explains how to wire Toast4OpenCode into that layout.
+
 Sample hook files:
 
 - `examples/opencode/opencode.powershell.json`
 - `examples/opencode/opencode.cmd.json`
 - `examples/opencode/opencode.wsl.json`
 
-Example PowerShell-oriented hook setup:
+If OpenCode CLI is already installed, use this sequence:
+
+1. Place the Toast4OpenCode repository in a stable Windows path.
+
+- Example: `C:\tools\Toast4OpenCode`
+- Your OpenCode config lives under your user profile, while the notifier script lives in this repository, so absolute paths are safer than relative ones.
+
+2. Decide which shell normally runs OpenCode.
+
+- PowerShell: use the PowerShell-style hook commands
+- `cmd.exe`: use the `toast4opencode.cmd` wrapper
+- WSL2: use the `/mnt/c/.../toast4opencode` wrapper
+
+3. Open the active OpenCode config file under `C:\Users\<your-user>\.config\opencode\`.
+
+- If you already have an OpenCode config, merge only the `hooks` section.
+- If you split config across multiple files, update the file OpenCode actually reads.
+- The exact filename can vary; the important part is adding the Toast4OpenCode commands to the `hooks` object.
+
+4. Use absolute paths in those hook commands.
+
+- OpenCode may run from many different project directories, so `.\scripts\...` is fragile.
+- A path like `C:\\tools\\Toast4OpenCode\\...` is stable even when your current working directory changes.
+
+5. Test Toast4OpenCode by itself before wiring it into OpenCode.
+
+PowerShell:
+
+```powershell
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 complete
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 error "OpenCode error" "Test notification"
+```
+
+`cmd.exe`:
+
+```bat
+C:\tools\Toast4OpenCode\toast4opencode.cmd complete
+C:\tools\Toast4OpenCode\toast4opencode.cmd error "OpenCode error" "Test notification"
+```
+
+WSL2:
+
+```bash
+/mnt/c/tools/Toast4OpenCode/toast4opencode complete
+/mnt/c/tools/Toast4OpenCode/toast4opencode error "OpenCode error" "Test notification"
+```
+
+6. After standalone testing works, add the hooks to the OpenCode config.
+
+Recommended PowerShell-oriented hook setup:
 
 ```json
 {
   "hooks": {
-    "onComplete": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 complete",
-    "onError": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 error",
-    "onPermissionRequest": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 permission",
-    "onInputRequired": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 input"
+    "onComplete": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 complete",
+    "onError": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 error",
+    "onPermissionRequest": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 permission",
+    "onInputRequired": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 input"
   }
 }
 ```
 
-Example `cmd.exe`-oriented hook setup:
+`cmd.exe`-oriented hook setup:
 
 ```json
 {
   "hooks": {
-    "onComplete": ".\\toast4opencode.cmd complete",
-    "onError": ".\\toast4opencode.cmd error",
-    "onPermissionRequest": ".\\toast4opencode.cmd permission",
-    "onInputRequired": ".\\toast4opencode.cmd input"
+    "onComplete": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd complete",
+    "onError": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd error",
+    "onPermissionRequest": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd permission",
+    "onInputRequired": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd input"
   }
 }
 ```
 
-Example WSL2-oriented hook setup:
+WSL2-oriented hook setup:
 
 ```json
 {
   "hooks": {
-    "onComplete": "./toast4opencode complete",
-    "onError": "./toast4opencode error",
-    "onPermissionRequest": "./toast4opencode permission",
-    "onInputRequired": "./toast4opencode input"
+    "onComplete": "/mnt/c/tools/Toast4OpenCode/toast4opencode complete",
+    "onError": "/mnt/c/tools/Toast4OpenCode/toast4opencode error",
+    "onPermissionRequest": "/mnt/c/tools/Toast4OpenCode/toast4opencode permission",
+    "onInputRequired": "/mnt/c/tools/Toast4OpenCode/toast4opencode input"
   }
 }
 ```
+
+7. Run real OpenCode tasks and verify that the hooks fire on actual events.
+
+- Run a short task and confirm the completion toast appears
+- Trigger a failure to confirm the error toast appears
+- Trigger a permission request or input prompt to verify those hooks
+
+8. Tune noise level in `C:\tools\Toast4OpenCode\setting.json`.
+
+- Set `"complete": false` if completion toasts are too noisy
+- Set `"sound": false` if you want visual toasts without sound
+
+Practical tips:
+
+- The OpenCode config directory and the Toast4OpenCode repository are separate locations. Think of config under `C:\Users\<your-user>\.config\opencode\` and the notifier itself under `C:\tools\Toast4OpenCode`.
+- Absolute paths are more reliable than relative paths for OpenCode hooks.
+- For WSL2, keeping the repository under `/mnt/c/...` makes it easier for Windows PowerShell to reach the script.
+- If OpenCode runs many background tasks, keeping only `error`, `permission`, and `input` enabled can be more practical than enabling every completion toast.
 
 ## Change Settings
 
