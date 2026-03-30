@@ -145,7 +145,7 @@ $cfg.taskbarFlash.sound = $false
 $cfg | ConvertTo-Json | Set-Content .\setting.json
 ```
 
-### OpenCode 연동
+## OpenCode 연동
 
 Windows에서 OpenCode CLI를 설치해 쓰는 경우, 플러그인 파일은 보통 `C:\Users\<사용자이름>\.config\opencode\plugins` 아래에 있습니다. 이 섹션은 그 기준으로 Toast4OpenCode를 연결하는 방법을 설명합니다.
 
@@ -156,7 +156,7 @@ OpenCode 훅 예제는 아래 파일에 들어 있습니다.
 
 OpenCode CLI가 이미 설치되어 있다면, 실제 적용 순서는 아래처럼 진행하면 됩니다.
 
-1. 먼저 Toast4OpenCode 저장소를 Windows에서 고정 경로에 둡니다.
+1. 먼저 Toast4OpenCode 저장소를 Windows에서 절대 경로에 둡니다.
 
 - 예시: `C:\tools\Toast4OpenCode`
 - OpenCode 설정 파일은 사용자 홈 아래에 있고, 알림 스크립트는 별도 저장소에 있으므로 상대경로보다 절대경로가 안전합니다.
@@ -171,7 +171,7 @@ OpenCode CLI가 이미 설치되어 있다면, 실제 적용 순서는 아래처
 - OpenCode는 다양한 작업 디렉토리에서 실행될 수 있으므로 `.\scripts\...` 같은 상대경로보다 `C:\\tools\\Toast4OpenCode\\...` 같은 절대경로가 더 안정적입니다.
 - 특히 OpenCode 설정 파일이 `C:\Users\<사용자이름>\.config\opencode\` 아래에 있어도, 실제 작업 디렉토리는 프로젝트마다 달라질 수 있습니다.
 
-**WSL**
+- WSL
 ```bash
 ...
 import { execFile } from "child_process"
@@ -187,7 +187,7 @@ const EVENT_MAP = {
 ...
 ```
 
-**Windows**
+- Windows (Powershell, cmd)
 ```powershell
 ...
 import { execFile } from "child_process"
@@ -226,7 +226,7 @@ C:\tools\Toast4OpenCode\toast4opencode.cmd error "OpenCode 오류" "테스트 �
 /mnt/c/tools/Toast4OpenCode/toast4opencode error "OpenCode 오류" "테스트 알림"
 ```
 
-5. OpenCode를 실행해서 실제 이벤트가 발생할 때 훅이 호출되는지 확인합니다.
+5. OpenCode를 실행해서 실제 이벤트가 발생할 때 알림이 오는지 확인합니다.
 
 - 짧은 작업을 하나 실행해서 완료 알림이 오는지 확인합니다.
 - 일부러 실패하는 명령이나 잘못된 입력을 줘서 `error` 또는 `input` 이벤트를 확인합니다.
