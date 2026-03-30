@@ -38,6 +38,27 @@ Install-Module BurntToast -Scope CurrentUser
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
+설명:
+
+- 이 단계는 항상 먼저 해야 하는 필수 단계는 아닙니다.
+- PowerShell에서 `toast4opencode.ps1` 실행 시 스크립트 실행이 차단되거나, `running scripts is disabled on this system` 같은 메시지가 나올 때 적용하면 됩니다.
+- `toast4opencode.cmd` 나 OpenCode 훅이 내부적으로 PowerShell 스크립트를 호출할 때도 같은 정책 제한에 걸릴 수 있습니다.
+- 이미 회사 정책이나 개인 설정으로 PowerShell 스크립트 실행이 허용되어 있다면 이 단계는 건너뛰어도 됩니다.
+- 예제에서는 `-Scope CurrentUser` 를 사용하므로 현재 로그인한 사용자에게만 적용되고, 시스템 전체 정책을 바꾸지는 않습니다.
+- `RemoteSigned` 는 로컬에서 만든 스크립트는 실행할 수 있게 하고, 인터넷에서 내려받은 스크립트는 서명 여부를 더 엄격하게 보게 하는 비교적 무난한 설정입니다.
+
+언제 적용하면 좋은가:
+
+- 처음 설치 후 `pwsh -File ...\\toast4opencode.ps1 complete` 테스트에서 실행 정책 오류가 났을 때
+- OpenCode CLI 훅은 등록했는데 실제 이벤트에서 알림이 전혀 뜨지 않고 PowerShell 실행 오류가 보일 때
+- `cmd.exe` 나 WSL2에서 래퍼를 호출했는데 내부 PowerShell 스크립트 단계에서 막힐 때
+
+언제 굳이 하지 않아도 되는가:
+
+- `pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File ...` 방식으로 이미 정상 실행되고 있을 때
+- 조직 보안 정책상 실행 정책을 변경하면 안 되는 환경일 때
+- 이미 사용자 범위 또는 시스템 범위에서 적절한 정책이 설정되어 있을 때
+
 ### 빠른 사용법
 
 PowerShell:
