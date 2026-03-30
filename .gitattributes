@@ -1,0 +1,8 @@
+# Ensure Unix launcher scripts keep LF line endings (WSL/Linux)
+toast4opencode text eol=lf
+*.sh text eol=lf
+
+# Keep Windows launchers/scripts with CRLF where appropriate
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
