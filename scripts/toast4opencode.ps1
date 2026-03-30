@@ -163,7 +163,8 @@ namespace Toast4OpenCode {
 
             try
             {
-                propertyStore.SetValue(ref AppIdKey, ref appIdVariant);
+                var appIdKey = AppIdKey;
+                propertyStore.SetValue(ref appIdKey, ref appIdVariant);
                 propertyStore.Commit();
                 ((IPersistFile)shellLink).Save(shortcutPath, true);
             }
