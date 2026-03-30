@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "onComplete": "./toast4opencode complete",
+    "onError": "./toast4opencode error",
+    "onPermissionRequest": "./toast4opencode permission",
+    "onInputRequired": "./toast4opencode input"
+  }
+}
