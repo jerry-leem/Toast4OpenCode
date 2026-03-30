@@ -18,6 +18,7 @@ Windows toast notifications for OpenCode using [BurntToast](https://github.com/W
 - 권한 요청 `permission`
 - 입력 필요 `input`
 - 사운드 알림 `sound`
+- 작업표시줄 깜빡임 `taskbarFlash`
 
 모든 이벤트는 루트의 [setting.json](./setting.json) 에서 켜고 끌 수 있습니다.
 
@@ -98,7 +99,8 @@ chmod +x ./toast4opencode
   "error": true,
   "permission": true,
   "input": true,
-  "sound": true
+  "sound": true,
+  "taskbarFlash": true
 }
 ```
 
@@ -110,7 +112,8 @@ chmod +x ./toast4opencode
   "error": true,
   "permission": true,
   "input": true,
-  "sound": false
+  "sound": false,
+  "taskbarFlash": false
 }
 ```
 
@@ -120,6 +123,7 @@ PowerShell에서 직접 수정하는 예시:
 $cfg = Get-Content .\setting.json -Raw | ConvertFrom-Json
 $cfg.complete = $false
 $cfg.sound = $false
+$cfg.taskbarFlash = $false
 $cfg | ConvertTo-Json | Set-Content .\setting.json
 ```
 
@@ -231,6 +235,7 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 
 - 예를 들어 완료 알림만 끄고 싶으면 `"complete": false`
 - 모든 소리를 끄고 배너만 유지하고 싶으면 `"sound": false`
+- 작업표시줄 깜빡임도 끄고 싶으면 `"taskbarFlash": false`
 
 실사용 팁:
 
@@ -244,6 +249,7 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 - WSL2에서는 `pwsh.exe` 또는 `powershell.exe` 를 호출할 수 있어야 합니다.
 - WSL2에서 저장소를 사용할 때는 `/mnt/c/...` 같은 Windows 접근 가능 경로에 두는 편이 안전합니다.
 - `sound` 가 `false` 이면 일반 알림도 무음으로 전송되고 `sound` 이벤트도 사실상 비활성화됩니다.
+- `taskbarFlash` 가 `true` 이면 토스트와 함께 현재 Windows 콘솔 창 또는 작업표시줄 버튼 깜빡임을 요청합니다. 콘솔 창 핸들을 찾지 못하는 환경에서는 조용히 건너뜁니다.
 
 ---
 
@@ -252,7 +258,9 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 ## Features
 
 - Completion, error, permission-request, input-needed, and sound alert notifications
+- Optional taskbar flashing via Win32 `FlashWindowEx`
 - `setting.json` toggles for `complete`, `error`, `permission`, `input`, and `sound`
+- `setting.json` toggle for `taskbarFlash`
 - Direct PowerShell execution plus wrappers for `cmd.exe` and WSL2
 - Sample OpenCode hook configs for each shell style
 
@@ -335,7 +343,8 @@ Default file:
   "error": true,
   "permission": true,
   "input": true,
-  "sound": true
+  "sound": true,
+  "taskbarFlash": true
 }
 ```
 
@@ -343,6 +352,7 @@ Behavior:
 
 - `complete`, `error`, `permission`, `input`: enable or disable that notification type
 - `sound`: master switch for toast sound playback; when `false`, notifications are sent silently and the `sound` event is skipped
+- `taskbarFlash`: request a taskbar or console-window flash through Win32 when a notification is sent
 
 Example: disable completion toasts and all sounds
 
@@ -352,7 +362,8 @@ Example: disable completion toasts and all sounds
   "error": true,
   "permission": true,
   "input": true,
-  "sound": false
+  "sound": false,
+  "taskbarFlash": false
 }
 ```
 
@@ -505,6 +516,7 @@ WSL2-oriented hook setup:
 
 - Set `"complete": false` if completion toasts are too noisy
 - Set `"sound": false` if you want visual toasts without sound
+- Set `"taskbarFlash": false` if you want toast-only behavior without flashing the Windows taskbar button
 
 Practical tips:
 
@@ -523,6 +535,7 @@ PowerShell example:
 $cfg = Get-Content .\setting.json -Raw | ConvertFrom-Json
 $cfg.complete = $false
 $cfg.sound = $false
+$cfg.taskbarFlash = $false
 $cfg | ConvertTo-Json | Set-Content .\setting.json
 ```
 
@@ -543,3 +556,4 @@ python3 -c "import json, pathlib; p = pathlib.Path('setting.json'); d = json.loa
 - If you see `BurntToast module is not installed`, install it from PowerShell and rerun the command.
 - If WSL2 cannot start a notification, verify that `pwsh.exe` or `powershell.exe` is callable from WSL2 and that the repository path is reachable from Windows.
 - If notifications appear without sound, confirm `sound` is `true` in `setting.json` and that you did not pass `-Silent`.
+- If taskbar flashing does not happen, verify that the notifier is running in a Windows console session with an accessible window handle. Some host environments can still show a toast while skipping the flash call.

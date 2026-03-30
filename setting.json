@@ -3,5 +3,6 @@
   "error": true,
   "permission": true,
   "input": true,
-  "sound": true
+  "sound": true,
+  "taskbarFlash": true
 }

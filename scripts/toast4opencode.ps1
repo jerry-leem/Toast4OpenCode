@@ -46,6 +46,39 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if (-not ("Toast4OpenCode.Win32" -as [type])) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+namespace Toast4OpenCode {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct FLASHWINFO {
+        public UInt32 cbSize;
+        public IntPtr hwnd;
+        public UInt32 dwFlags;
+        public UInt32 uCount;
+        public UInt32 dwTimeout;
+    }
+
+    public static class Win32 {
+        public const UInt32 FLASHW_STOP = 0;
+        public const UInt32 FLASHW_CAPTION = 1;
+        public const UInt32 FLASHW_TRAY = 2;
+        public const UInt32 FLASHW_ALL = FLASHW_CAPTION | FLASHW_TRAY;
+        public const UInt32 FLASHW_TIMERNOFG = 12;
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetConsoleWindow();
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
+    }
+}
+"@
+}
+
 function Write-ExitError {
     param(
         [string]$Text,
@@ -140,6 +173,46 @@ function Get-EventDefaults {
     }
 }
 
+function Get-OptionalBoolSetting {
+    param(
+        [object]$Config,
+        [string]$Name,
+        [bool]$DefaultValue
+    )
+
+    if ($null -eq $Config.PSObject.Properties[$Name]) {
+        return $DefaultValue
+    }
+
+    $value = $Config.$Name
+    if ($value -is [bool]) {
+        return $value
+    }
+
+    Write-ExitError "Config setting '$Name' must be true or false." 2
+}
+
+function Invoke-TaskbarFlash {
+    param(
+        [uint32]$Count = 3
+    )
+
+    $windowHandle = [Toast4OpenCode.Win32]::GetConsoleWindow()
+    if ($windowHandle -eq [IntPtr]::Zero) {
+        return $false
+    }
+
+    $flashInfo = New-Object Toast4OpenCode.FLASHWINFO
+    $flashInfo.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf([type][Toast4OpenCode.FLASHWINFO])
+    $flashInfo.hwnd = $windowHandle
+    $flashInfo.dwFlags = [Toast4OpenCode.Win32]::FLASHW_ALL
+    $flashInfo.uCount = $Count
+    $flashInfo.dwTimeout = 0
+
+    [void][Toast4OpenCode.Win32]::FlashWindowEx([ref]$flashInfo)
+    return $true
+}
+
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     $ConfigPath = Get-DefaultConfigPath
 }
@@ -151,6 +224,7 @@ $config = Get-Config -Path $ConfigPath
 
 $eventEnabled = Test-BoolSetting -Config $config -Name $Event
 $soundEnabled = Test-BoolSetting -Config $config -Name "sound"
+$taskbarFlashEnabled = Get-OptionalBoolSetting -Config $config -Name "taskbarFlash" -DefaultValue $false
 
 if (-not $eventEnabled) {
     Write-Output "toast4opencode: '$Event' notifications are disabled in $ConfigPath"
@@ -185,6 +259,11 @@ try {
     else {
         New-BurntToastNotification -Text $Title, $Message -Sound $Sound | Out-Null
     }
+
+    if ($taskbarFlashEnabled) {
+        [void](Invoke-TaskbarFlash)
+    }
+
     Write-Output "toast4opencode: sent '$Event' notification"
 }
 catch {
