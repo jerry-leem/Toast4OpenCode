@@ -99,85 +99,64 @@ $cfg | ConvertTo-Json | Set-Content .\setting.json
 
 ### OpenCode 연동
 
+Windows에서 OpenCode CLI를 설치해 쓰는 경우, 설정 파일은 보통 `C:\Users\<사용자이름>\.config\opencode\` 아래에 있습니다. 이 섹션은 그 기준으로 Toast4OpenCode를 연결하는 방법을 설명합니다.
+
 OpenCode 훅 예제는 아래 파일에 들어 있습니다.
 
 - `examples/opencode/opencode.powershell.json`
 - `examples/opencode/opencode.cmd.json`
 - `examples/opencode/opencode.wsl.json`
 
-OpenCode CLI가 이미 설치되어 있다면, 실제 연동 순서는 아래처럼 진행하면 됩니다.
+OpenCode CLI가 이미 설치되어 있다면, 실제 적용 순서는 아래처럼 진행하면 됩니다.
 
-1. OpenCode를 어느 셸에서 실행할지 먼저 정합니다.
+1. 먼저 Toast4OpenCode 저장소를 Windows에서 고정 경로에 둡니다.
+
+- 예시: `C:\tools\Toast4OpenCode`
+- OpenCode 설정 파일은 사용자 홈 아래에 있고, 알림 스크립트는 별도 저장소에 있으므로 상대경로보다 절대경로가 안전합니다.
+
+2. OpenCode를 어느 셸에서 실행할지 먼저 정합니다.
 
 - PowerShell에서 OpenCode를 실행한다면 `opencode.powershell.json`
 - `cmd.exe`에서 OpenCode를 실행한다면 `opencode.cmd.json`
 - WSL2에서 OpenCode를 실행한다면 `opencode.wsl.json`
 
-2. 선택한 예제 파일의 `hooks` 내용을 현재 사용하는 OpenCode 설정 파일에 반영합니다.
+3. `C:\Users\<사용자이름>\.config\opencode\` 아래에서 현재 OpenCode CLI가 읽는 설정 파일을 엽니다.
 
-- 이미 OpenCode 설정 파일이 있다면 `hooks` 항목만 병합하면 됩니다.
-- 아직 별도 설정이 없다면 예제 파일을 기반으로 시작해도 됩니다.
+- 이미 OpenCode 설정이 있다면 `hooks` 항목만 추가하거나 병합하면 됩니다.
+- 여러 설정 파일을 나눠 쓰고 있다면, 실제로 OpenCode CLI가 읽는 활성 설정 파일에 넣어야 합니다.
+- 파일 이름이 무엇이든 핵심은 `hooks` 항목에 Toast4OpenCode 명령을 추가하는 것입니다.
 
-3. OpenCode가 실행되는 현재 작업 디렉토리 기준으로 경로가 맞는지 확인합니다.
+4. OpenCode 설정 파일 안의 훅 명령은 절대경로로 넣습니다.
 
-- 예제에 들어 있는 경로는 `Toast4OpenCode` 저장소 루트에서 OpenCode를 실행한다고 가정한 상대경로입니다.
-- OpenCode를 다른 디렉토리에서 실행한다면 상대경로 대신 절대경로로 바꾸는 것이 안전합니다.
-- 예를 들어 PowerShell에서는 `C:\\tools\\Toast4OpenCode\\scripts\\toast4opencode.ps1` 같은 절대경로를 쓸 수 있습니다.
+- OpenCode는 다양한 작업 디렉토리에서 실행될 수 있으므로 `.\scripts\...` 같은 상대경로보다 `C:\\tools\\Toast4OpenCode\\...` 같은 절대경로가 더 안정적입니다.
+- 특히 OpenCode 설정 파일이 `C:\Users\<사용자이름>\.config\opencode\` 아래에 있어도, 실제 작업 디렉토리는 프로젝트마다 달라질 수 있습니다.
 
-4. OpenCode를 붙이기 전에 알림 스크립트를 단독으로 먼저 테스트합니다.
+5. OpenCode를 붙이기 전에 Toast4OpenCode를 단독으로 먼저 테스트합니다.
 
 - PowerShell:
 
 ```powershell
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 complete
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 error "OpenCode 오류" "테스트 알림"
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 complete
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 error "OpenCode 오류" "테스트 알림"
 ```
 
 - `cmd.exe`:
 
 ```bat
-toast4opencode.cmd complete
-toast4opencode.cmd error "OpenCode 오류" "테스트 알림"
+C:\tools\Toast4OpenCode\toast4opencode.cmd complete
+C:\tools\Toast4OpenCode\toast4opencode.cmd error "OpenCode 오류" "테스트 알림"
 ```
 
 - WSL2:
 
 ```bash
-./toast4opencode complete
-./toast4opencode error "OpenCode 오류" "테스트 알림"
+/mnt/c/tools/Toast4OpenCode/toast4opencode complete
+/mnt/c/tools/Toast4OpenCode/toast4opencode error "OpenCode 오류" "테스트 알림"
 ```
 
-5. 단독 테스트가 정상이라면 OpenCode를 실행해서 실제 이벤트가 발생할 때 훅이 호출되는지 확인합니다.
+6. 단독 테스트가 정상이라면 OpenCode 설정 파일의 `hooks` 에 명령을 넣습니다.
 
-- 짧은 작업을 하나 실행해서 완료 알림이 오는지 확인합니다.
-- 일부러 실패하는 명령이나 잘못된 입력을 줘서 `error` 또는 `input` 이벤트를 확인합니다.
-- 권한 승인이 필요한 작업을 유도해서 `permission` 이벤트를 확인합니다.
-
-6. 너무 자주 울리거나 특정 알림이 필요 없으면 `setting.json` 에서 끕니다.
-
-- 예를 들어 완료 알림만 끄고 싶으면 `"complete": false`
-- 모든 소리를 끄고 배너만 유지하고 싶으면 `"sound": false`
-
-실사용 팁:
-
-- OpenCode를 항상 같은 위치에서 실행하지 않는다면 훅 명령에 절대경로를 쓰는 편이 더 안정적입니다.
-- WSL2에서는 저장소를 `/mnt/c/...` 아래에 두면 Windows 쪽 PowerShell이 스크립트를 찾기 쉽습니다.
-- OpenCode가 백그라운드 작업을 자주 만들면 `complete` 는 끄고 `error`, `permission`, `input` 만 남기는 구성이 더 실용적일 수 있습니다.
-
-PowerShell 기준 예시는 다음과 같습니다.
-
-```json
-{
-  "hooks": {
-    "onComplete": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 complete",
-    "onError": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 error",
-    "onPermissionRequest": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 permission",
-    "onInputRequired": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 input"
-  }
-}
-```
-
-절대경로 예시는 다음과 같습니다.
+PowerShell에서 OpenCode를 실행할 때 가장 안전한 예시는 다음과 같습니다.
 
 ```json
 {
@@ -189,6 +168,50 @@ PowerShell 기준 예시는 다음과 같습니다.
   }
 }
 ```
+
+`cmd.exe` 에서 OpenCode를 실행한다면 다음 형태로 넣으면 됩니다.
+
+```json
+{
+  "hooks": {
+    "onComplete": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd complete",
+    "onError": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd error",
+    "onPermissionRequest": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd permission",
+    "onInputRequired": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd input"
+  }
+}
+```
+
+WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
+
+```json
+{
+  "hooks": {
+    "onComplete": "/mnt/c/tools/Toast4OpenCode/toast4opencode complete",
+    "onError": "/mnt/c/tools/Toast4OpenCode/toast4opencode error",
+    "onPermissionRequest": "/mnt/c/tools/Toast4OpenCode/toast4opencode permission",
+    "onInputRequired": "/mnt/c/tools/Toast4OpenCode/toast4opencode input"
+  }
+}
+```
+
+7. OpenCode를 실행해서 실제 이벤트가 발생할 때 훅이 호출되는지 확인합니다.
+
+- 짧은 작업을 하나 실행해서 완료 알림이 오는지 확인합니다.
+- 일부러 실패하는 명령이나 잘못된 입력을 줘서 `error` 또는 `input` 이벤트를 확인합니다.
+- 권한 승인이 필요한 작업을 유도해서 `permission` 이벤트를 확인합니다.
+
+8. 너무 자주 울리거나 특정 알림이 필요 없으면 `C:\tools\Toast4OpenCode\setting.json` 에서 끕니다.
+
+- 예를 들어 완료 알림만 끄고 싶으면 `"complete": false`
+- 모든 소리를 끄고 배너만 유지하고 싶으면 `"sound": false`
+
+실사용 팁:
+
+- Windows OpenCode CLI 설정 경로와 Toast4OpenCode 저장소 경로는 서로 다릅니다. 설정은 `C:\Users\<사용자이름>\.config\opencode\`, 실제 알림 스크립트는 `C:\tools\Toast4OpenCode` 같은 별도 위치에 둔다고 생각하면 됩니다.
+- OpenCode를 항상 같은 위치에서 실행하지 않는다면 훅 명령에 절대경로를 쓰는 편이 더 안정적입니다.
+- WSL2에서는 저장소를 `/mnt/c/...` 아래에 두면 Windows 쪽 PowerShell이 스크립트를 찾기 쉽습니다.
+- OpenCode가 백그라운드 작업을 자주 만들면 `complete` 는 끄고 `error`, `permission`, `input` 만 남기는 구성이 더 실용적일 수 있습니다.
 
 ### 참고
 
