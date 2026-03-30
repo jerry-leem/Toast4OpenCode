@@ -19,6 +19,11 @@ Windows toast notifications for OpenCode using [BurntToast](https://github.com/W
 - 입력 필요 `input`
 - 사운드 알림 `sound`
 - 작업표시줄 깜빡임 `taskbarFlash`
+  - 완료별 `taskbarFlash.complete`
+  - 오류별 `taskbarFlash.error`
+  - 권한요청별 `taskbarFlash.permission`
+  - 입력필요별 `taskbarFlash.input`
+  - 사운드알림별 `taskbarFlash.sound`
 
 모든 이벤트는 루트의 [setting.json](./setting.json) 에서 켜고 끌 수 있습니다.
 
@@ -100,7 +105,13 @@ chmod +x ./toast4opencode
   "permission": true,
   "input": true,
   "sound": true,
-  "taskbarFlash": true
+  "taskbarFlash": {
+    "complete": true,
+    "error": true,
+    "permission": true,
+    "input": true,
+    "sound": true
+  }
 }
 ```
 
@@ -113,7 +124,13 @@ chmod +x ./toast4opencode
   "permission": true,
   "input": true,
   "sound": false,
-  "taskbarFlash": false
+  "taskbarFlash": {
+    "complete": false,
+    "error": true,
+    "permission": true,
+    "input": false,
+    "sound": false
+  }
 }
 ```
 
@@ -123,7 +140,9 @@ PowerShell에서 직접 수정하는 예시:
 $cfg = Get-Content .\setting.json -Raw | ConvertFrom-Json
 $cfg.complete = $false
 $cfg.sound = $false
-$cfg.taskbarFlash = $false
+$cfg.taskbarFlash.complete = $false
+$cfg.taskbarFlash.input = $false
+$cfg.taskbarFlash.sound = $false
 $cfg | ConvertTo-Json | Set-Content .\setting.json
 ```
 
@@ -235,7 +254,8 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 
 - 예를 들어 완료 알림만 끄고 싶으면 `"complete": false`
 - 모든 소리를 끄고 배너만 유지하고 싶으면 `"sound": false`
-- 작업표시줄 깜빡임도 끄고 싶으면 `"taskbarFlash": false`
+- 완료 시 작업표시줄 깜빡임만 끄고 싶으면 `taskbarFlash.complete` 를 `false` 로 둡니다
+- 오류만 작업표시줄을 깜빡이게 하고 싶으면 `taskbarFlash.error` 만 `true` 로 두면 됩니다
 
 실사용 팁:
 
@@ -249,7 +269,9 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 - WSL2에서는 `pwsh.exe` 또는 `powershell.exe` 를 호출할 수 있어야 합니다.
 - WSL2에서 저장소를 사용할 때는 `/mnt/c/...` 같은 Windows 접근 가능 경로에 두는 편이 안전합니다.
 - `sound` 가 `false` 이면 일반 알림도 무음으로 전송되고 `sound` 이벤트도 사실상 비활성화됩니다.
-- `taskbarFlash` 가 `true` 이면 토스트와 함께 현재 Windows 콘솔 창 또는 작업표시줄 버튼 깜빡임을 요청합니다. 콘솔 창 핸들을 찾지 못하는 환경에서는 조용히 건너뜁니다.
+- `taskbarFlash` 는 이벤트별 객체입니다. 예를 들어 `taskbarFlash.error` 만 `true` 로 두면 오류 때만 작업표시줄 깜빡임을 요청합니다.
+- 이전 단일 불리언 형식인 `"taskbarFlash": true` 도 호환 차원에서 계속 읽습니다.
+- 콘솔 창 핸들을 찾지 못하는 환경에서는 작업표시줄 깜빡임은 조용히 건너뜁니다.
 
 ---
 
@@ -260,7 +282,7 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 - Completion, error, permission-request, input-needed, and sound alert notifications
 - Optional taskbar flashing via Win32 `FlashWindowEx`
 - `setting.json` toggles for `complete`, `error`, `permission`, `input`, and `sound`
-- `setting.json` toggle for `taskbarFlash`
+- Per-event `taskbarFlash.complete`, `taskbarFlash.error`, `taskbarFlash.permission`, `taskbarFlash.input`, and `taskbarFlash.sound`
 - Direct PowerShell execution plus wrappers for `cmd.exe` and WSL2
 - Sample OpenCode hook configs for each shell style
 
@@ -344,7 +366,13 @@ Default file:
   "permission": true,
   "input": true,
   "sound": true,
-  "taskbarFlash": true
+  "taskbarFlash": {
+    "complete": true,
+    "error": true,
+    "permission": true,
+    "input": true,
+    "sound": true
+  }
 }
 ```
 
@@ -352,7 +380,8 @@ Behavior:
 
 - `complete`, `error`, `permission`, `input`: enable or disable that notification type
 - `sound`: master switch for toast sound playback; when `false`, notifications are sent silently and the `sound` event is skipped
-- `taskbarFlash`: request a taskbar or console-window flash through Win32 when a notification is sent
+- `taskbarFlash.complete`, `taskbarFlash.error`, `taskbarFlash.permission`, `taskbarFlash.input`, `taskbarFlash.sound`: request a taskbar or console-window flash for that specific event
+- For backward compatibility, the older boolean form `"taskbarFlash": true` or `"taskbarFlash": false` is still accepted
 
 Example: disable completion toasts and all sounds
 
@@ -363,7 +392,13 @@ Example: disable completion toasts and all sounds
   "permission": true,
   "input": true,
   "sound": false,
-  "taskbarFlash": false
+  "taskbarFlash": {
+    "complete": false,
+    "error": true,
+    "permission": true,
+    "input": false,
+    "sound": false
+  }
 }
 ```
 
@@ -516,7 +551,8 @@ WSL2-oriented hook setup:
 
 - Set `"complete": false` if completion toasts are too noisy
 - Set `"sound": false` if you want visual toasts without sound
-- Set `"taskbarFlash": false` if you want toast-only behavior without flashing the Windows taskbar button
+- Set `taskbarFlash.complete = false` if you want completion toasts without taskbar flashing
+- Keep only `taskbarFlash.error = true` if you want flashing only for failures
 
 Practical tips:
 
@@ -535,7 +571,9 @@ PowerShell example:
 $cfg = Get-Content .\setting.json -Raw | ConvertFrom-Json
 $cfg.complete = $false
 $cfg.sound = $false
-$cfg.taskbarFlash = $false
+$cfg.taskbarFlash.complete = $false
+$cfg.taskbarFlash.input = $false
+$cfg.taskbarFlash.sound = $false
 $cfg | ConvertTo-Json | Set-Content .\setting.json
 ```
 

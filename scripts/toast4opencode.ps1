@@ -192,6 +192,38 @@ function Get-OptionalBoolSetting {
     Write-ExitError "Config setting '$Name' must be true or false." 2
 }
 
+function Get-TaskbarFlashSetting {
+    param(
+        [object]$Config,
+        [string]$EventName
+    )
+
+    if ($null -eq $Config.PSObject.Properties["taskbarFlash"]) {
+        return $false
+    }
+
+    $taskbarFlash = $Config.taskbarFlash
+
+    if ($taskbarFlash -is [bool]) {
+        return $taskbarFlash
+    }
+
+    if ($taskbarFlash -isnot [System.Management.Automation.PSCustomObject]) {
+        Write-ExitError "Config setting 'taskbarFlash' must be true, false, or an object with per-event booleans." 2
+    }
+
+    $eventProperty = $taskbarFlash.PSObject.Properties[$EventName]
+    if ($null -eq $eventProperty) {
+        return $false
+    }
+
+    if ($eventProperty.Value -is [bool]) {
+        return $eventProperty.Value
+    }
+
+    Write-ExitError "Config setting 'taskbarFlash.$EventName' must be true or false." 2
+}
+
 function Invoke-TaskbarFlash {
     param(
         [uint32]$Count = 3
@@ -224,7 +256,7 @@ $config = Get-Config -Path $ConfigPath
 
 $eventEnabled = Test-BoolSetting -Config $config -Name $Event
 $soundEnabled = Test-BoolSetting -Config $config -Name "sound"
-$taskbarFlashEnabled = Get-OptionalBoolSetting -Config $config -Name "taskbarFlash" -DefaultValue $false
+$taskbarFlashEnabled = Get-TaskbarFlashSetting -Config $config -EventName $Event
 
 if (-not $eventEnabled) {
     Write-Output "toast4opencode: '$Event' notifications are disabled in $ConfigPath"

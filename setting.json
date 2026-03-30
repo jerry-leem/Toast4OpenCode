@@ -4,5 +4,11 @@
   "permission": true,
   "input": true,
   "sound": true,
-  "taskbarFlash": true
+  "taskbarFlash": {
+    "complete": true,
+    "error": true,
+    "permission": true,
+    "input": true,
+    "sound": true
+  }
 }
