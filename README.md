@@ -1,6 +1,6 @@
 # Toast4OpenCode
 
-Windows toast notifications for OpenCode using [BurntToast](https://github.com/Windos/BurntToast). The project is built around one PowerShell script and thin launchers for PowerShell, `cmd.exe`, and WSL2.
+Windows notifications for OpenCode using built-in PowerShell, .NET, and Win32 APIs. The project is built around one PowerShell script and thin launchers for PowerShell, `cmd.exe`, and WSL2.
 
 ## Language Guide
 
@@ -9,7 +9,7 @@ Windows toast notifications for OpenCode using [BurntToast](https://github.com/W
 
 ## Korean Guide / 한국어 안내
 
-`Toast4OpenCode`는 Windows에서 OpenCode 작업 상태를 토스트 알림으로 보여주는 도구입니다. 실제 알림 표시는 PowerShell용 BurntToast 모듈이 담당하고, 이 저장소는 같은 기능을 PowerShell, `cmd.exe`, WSL2에서 공통으로 호출할 수 있게 구성되어 있습니다.
+`Toast4OpenCode`는 Windows에서 OpenCode 작업 상태를 알림으로 보여주는 도구입니다. 외부 PowerShell 모듈 없이 Windows 기본 PowerShell, .NET, Win32 기능만 사용하므로, 저장소를 클론한 뒤 바로 쓸 수 있도록 구성되어 있습니다.
 
 지원 이벤트:
 
@@ -36,12 +36,10 @@ git clone https://github.com/jerry-leem/Toast4OpenCode.git
 cd Toast4OpenCode
 ```
 
-2. PowerShell에서 BurntToast를 설치합니다.
+2. 추가 모듈 설치는 필요하지 않습니다.
 
-```powershell
-Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-Install-Module BurntToast -Scope CurrentUser
-```
+- `BurntToast` 같은 외부 PowerShell 모듈을 받지 않습니다.
+- 회사 내 폐쇄망처럼 외부 다운로드가 막힌 환경도, 기본 Windows PowerShell/.NET 구성만 있으면 그대로 사용할 수 있습니다.
 
 3. 필요하면 스크립트 실행 정책을 완화합니다.
 
@@ -272,6 +270,7 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 - `taskbarFlash` 는 이벤트별 객체입니다. 예를 들어 `taskbarFlash.error` 만 `true` 로 두면 오류 때만 작업표시줄 깜빡임을 요청합니다.
 - 이전 단일 불리언 형식인 `"taskbarFlash": true` 도 호환 차원에서 계속 읽습니다.
 - 콘솔 창 핸들을 찾지 못하는 환경에서는 작업표시줄 깜빡임은 조용히 건너뜁니다.
+- 이 프로젝트는 외부 다운로드 없이 동작하도록 되어 있지만, Windows 자체에서 `System.Windows.Forms` 와 `System.Drawing` 을 사용할 수 있는 기본 .NET Desktop 구성은 필요합니다.
 
 ---
 
@@ -284,6 +283,7 @@ WSL2에서 OpenCode를 실행한다면 다음 형태가 맞습니다.
 - `setting.json` toggles for `complete`, `error`, `permission`, `input`, and `sound`
 - Per-event `taskbarFlash.complete`, `taskbarFlash.error`, `taskbarFlash.permission`, `taskbarFlash.input`, and `taskbarFlash.sound`
 - Direct PowerShell execution plus wrappers for `cmd.exe` and WSL2
+- No external PowerShell module download required
 - Sample OpenCode hook configs for each shell style
 
 ## Repository Layout
@@ -301,7 +301,7 @@ Toast4OpenCode/
 
 - Windows 10 or later
 - PowerShell 7+ (`pwsh`) recommended
-- BurntToast PowerShell module
+- Built-in Windows PowerShell/.NET support for `System.Windows.Forms`, `System.Drawing`, and Win32 interop
 - For WSL2 usage, the repository should live on a Windows-accessible path such as `/mnt/c/...` so the wrapper can hand the script to Windows PowerShell cleanly
 
 ## Install
@@ -313,20 +313,11 @@ git clone https://github.com/jerry-leem/Toast4OpenCode.git
 cd Toast4OpenCode
 ```
 
-### 2. Install BurntToast from PowerShell
+### 2. No external module installation is required
 
-Run this once in Windows PowerShell or PowerShell 7:
-
-```powershell
-Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-Install-Module BurntToast -Scope CurrentUser
-```
-
-Verify the module:
-
-```powershell
-Get-Module BurntToast -ListAvailable
-```
+- This project no longer depends on `BurntToast`.
+- It uses built-in Windows PowerShell, .NET, and Win32 APIs, so `git clone` is enough even in closed-network environments where external downloads are blocked.
+- If your Windows image already includes the standard .NET Desktop components, no additional package fetch is required.
 
 ### 3. Allow local script execution if needed
 
@@ -591,7 +582,7 @@ python3 -c "import json, pathlib; p = pathlib.Path('setting.json'); d = json.loa
 
 ## Troubleshooting
 
-- If you see `BurntToast module is not installed`, install it from PowerShell and rerun the command.
 - If WSL2 cannot start a notification, verify that `pwsh.exe` or `powershell.exe` is callable from WSL2 and that the repository path is reachable from Windows.
 - If notifications appear without sound, confirm `sound` is `true` in `setting.json` and that you did not pass `-Silent`.
-- If taskbar flashing does not happen, verify that the notifier is running in a Windows console session with an accessible window handle. Some host environments can still show a toast while skipping the flash call.
+- If taskbar flashing does not happen, verify that the notifier is running in a Windows console session with an accessible window handle. Some host environments can still show a notification while skipping the flash call.
+- If notification display fails on a very minimal Windows image, confirm that `System.Windows.Forms` and `System.Drawing` are available in PowerShell.

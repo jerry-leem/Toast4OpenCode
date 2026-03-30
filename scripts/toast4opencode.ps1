@@ -46,6 +46,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
 if (-not ("Toast4OpenCode.Win32" -as [type])) {
     Add-Type -TypeDefinition @"
 using System;
@@ -173,25 +176,6 @@ function Get-EventDefaults {
     }
 }
 
-function Get-OptionalBoolSetting {
-    param(
-        [object]$Config,
-        [string]$Name,
-        [bool]$DefaultValue
-    )
-
-    if ($null -eq $Config.PSObject.Properties[$Name]) {
-        return $DefaultValue
-    }
-
-    $value = $Config.$Name
-    if ($value -is [bool]) {
-        return $value
-    }
-
-    Write-ExitError "Config setting '$Name' must be true or false." 2
-}
-
 function Get-TaskbarFlashSetting {
     param(
         [object]$Config,
@@ -245,6 +229,68 @@ function Invoke-TaskbarFlash {
     return $true
 }
 
+function Get-TooltipIcon {
+    param([string]$EventName)
+
+    switch ($EventName) {
+        "error" { return [System.Windows.Forms.ToolTipIcon]::Error }
+        "permission" { return [System.Windows.Forms.ToolTipIcon]::Warning }
+        "input" { return [System.Windows.Forms.ToolTipIcon]::Warning }
+        default { return [System.Windows.Forms.ToolTipIcon]::Info }
+    }
+}
+
+function Play-NotificationSound {
+    param(
+        [string]$SoundName,
+        [bool]$SoundEnabled,
+        [bool]$SilentRequested
+    )
+
+    if ($SilentRequested -or -not $SoundEnabled) {
+        return
+    }
+
+    switch ($SoundName) {
+        { $_ -in @("Alarm", "Alarm2", "Alarm3", "Alarm4", "Alarm5", "Alarm6", "Alarm7", "Alarm8", "Alarm9", "Alarm10", "Call", "Call2", "Call3", "Call4", "Call5", "Call6", "Call7", "Call8", "Call9", "Call10") } {
+            [System.Media.SystemSounds]::Hand.Play()
+            return
+        }
+        { $_ -in @("Reminder", "Mail", "SMS") } {
+            [System.Media.SystemSounds]::Asterisk.Play()
+            return
+        }
+        { $_ -in @("IM", "Default") } {
+            [System.Media.SystemSounds]::Beep.Play()
+            return
+        }
+        default {
+            [System.Media.SystemSounds]::Exclamation.Play()
+            return
+        }
+    }
+}
+
+function Show-WindowsNotification {
+    param(
+        [string]$NotificationTitle,
+        [string]$NotificationMessage,
+        [string]$EventName
+    )
+
+    $notifyIcon = New-Object System.Windows.Forms.NotifyIcon
+    $notifyIcon.Icon = [System.Drawing.SystemIcons]::Information
+    $notifyIcon.BalloonTipIcon = Get-TooltipIcon -EventName $EventName
+    $notifyIcon.BalloonTipTitle = $NotificationTitle
+    $notifyIcon.BalloonTipText = $NotificationMessage
+    $notifyIcon.Text = "Toast4OpenCode"
+    $notifyIcon.Visible = $true
+    $notifyIcon.ShowBalloonTip(3000)
+
+    Start-Sleep -Milliseconds 3500
+    $notifyIcon.Dispose()
+}
+
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     $ConfigPath = Get-DefaultConfigPath
 }
@@ -264,33 +310,22 @@ if (-not $eventEnabled) {
 }
 
 try {
-    Import-Module BurntToast -ErrorAction Stop
-}
-catch {
-    Write-ExitError "BurntToast module is not installed. Run 'Install-Module BurntToast -Scope CurrentUser' in PowerShell first." 3
-}
+    $defaults = Get-EventDefaults -Name $Event
 
-$defaults = Get-EventDefaults -Name $Event
-
-if ([string]::IsNullOrWhiteSpace($Title)) {
-    $Title = $defaults.Title
-}
-
-if ([string]::IsNullOrWhiteSpace($Message)) {
-    $Message = $defaults.Message
-}
-
-if ($PSBoundParameters.ContainsKey("Sound") -eq $false) {
-    $Sound = $defaults.Sound
-}
-
-try {
-    if ($Silent.IsPresent -or -not $soundEnabled) {
-        New-BurntToastNotification -Text $Title, $Message -Silent | Out-Null
+    if ([string]::IsNullOrWhiteSpace($Title)) {
+        $Title = $defaults.Title
     }
-    else {
-        New-BurntToastNotification -Text $Title, $Message -Sound $Sound | Out-Null
+
+    if ([string]::IsNullOrWhiteSpace($Message)) {
+        $Message = $defaults.Message
     }
+
+    if ($PSBoundParameters.ContainsKey("Sound") -eq $false) {
+        $Sound = $defaults.Sound
+    }
+
+    Play-NotificationSound -SoundName $Sound -SoundEnabled $soundEnabled -SilentRequested $Silent.IsPresent
+    Show-WindowsNotification -NotificationTitle $Title -NotificationMessage $Message -EventName $Event
 
     if ($taskbarFlashEnabled) {
         [void](Invoke-TaskbarFlash)
@@ -299,5 +334,5 @@ try {
     Write-Output "toast4opencode: sent '$Event' notification"
 }
 catch {
-    Write-ExitError "Failed to send BurntToast notification.`n$($_.Exception.Message)" 4
+    Write-ExitError "Failed to send Windows notification.`n$($_.Exception.Message)" 4
 }
