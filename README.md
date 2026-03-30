@@ -105,6 +105,65 @@ OpenCode 훅 예제는 아래 파일에 들어 있습니다.
 - `examples/opencode/opencode.cmd.json`
 - `examples/opencode/opencode.wsl.json`
 
+OpenCode CLI가 이미 설치되어 있다면, 실제 연동 순서는 아래처럼 진행하면 됩니다.
+
+1. OpenCode를 어느 셸에서 실행할지 먼저 정합니다.
+
+- PowerShell에서 OpenCode를 실행한다면 `opencode.powershell.json`
+- `cmd.exe`에서 OpenCode를 실행한다면 `opencode.cmd.json`
+- WSL2에서 OpenCode를 실행한다면 `opencode.wsl.json`
+
+2. 선택한 예제 파일의 `hooks` 내용을 현재 사용하는 OpenCode 설정 파일에 반영합니다.
+
+- 이미 OpenCode 설정 파일이 있다면 `hooks` 항목만 병합하면 됩니다.
+- 아직 별도 설정이 없다면 예제 파일을 기반으로 시작해도 됩니다.
+
+3. OpenCode가 실행되는 현재 작업 디렉토리 기준으로 경로가 맞는지 확인합니다.
+
+- 예제에 들어 있는 경로는 `Toast4OpenCode` 저장소 루트에서 OpenCode를 실행한다고 가정한 상대경로입니다.
+- OpenCode를 다른 디렉토리에서 실행한다면 상대경로 대신 절대경로로 바꾸는 것이 안전합니다.
+- 예를 들어 PowerShell에서는 `C:\\tools\\Toast4OpenCode\\scripts\\toast4opencode.ps1` 같은 절대경로를 쓸 수 있습니다.
+
+4. OpenCode를 붙이기 전에 알림 스크립트를 단독으로 먼저 테스트합니다.
+
+- PowerShell:
+
+```powershell
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 complete
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 error "OpenCode 오류" "테스트 알림"
+```
+
+- `cmd.exe`:
+
+```bat
+toast4opencode.cmd complete
+toast4opencode.cmd error "OpenCode 오류" "테스트 알림"
+```
+
+- WSL2:
+
+```bash
+./toast4opencode complete
+./toast4opencode error "OpenCode 오류" "테스트 알림"
+```
+
+5. 단독 테스트가 정상이라면 OpenCode를 실행해서 실제 이벤트가 발생할 때 훅이 호출되는지 확인합니다.
+
+- 짧은 작업을 하나 실행해서 완료 알림이 오는지 확인합니다.
+- 일부러 실패하는 명령이나 잘못된 입력을 줘서 `error` 또는 `input` 이벤트를 확인합니다.
+- 권한 승인이 필요한 작업을 유도해서 `permission` 이벤트를 확인합니다.
+
+6. 너무 자주 울리거나 특정 알림이 필요 없으면 `setting.json` 에서 끕니다.
+
+- 예를 들어 완료 알림만 끄고 싶으면 `"complete": false`
+- 모든 소리를 끄고 배너만 유지하고 싶으면 `"sound": false`
+
+실사용 팁:
+
+- OpenCode를 항상 같은 위치에서 실행하지 않는다면 훅 명령에 절대경로를 쓰는 편이 더 안정적입니다.
+- WSL2에서는 저장소를 `/mnt/c/...` 아래에 두면 Windows 쪽 PowerShell이 스크립트를 찾기 쉽습니다.
+- OpenCode가 백그라운드 작업을 자주 만들면 `complete` 는 끄고 `error`, `permission`, `input` 만 남기는 구성이 더 실용적일 수 있습니다.
+
 PowerShell 기준 예시는 다음과 같습니다.
 
 ```json
@@ -114,6 +173,19 @@ PowerShell 기준 예시는 다음과 같습니다.
     "onError": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 error",
     "onPermissionRequest": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 permission",
     "onInputRequired": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\toast4opencode.ps1 input"
+  }
+}
+```
+
+절대경로 예시는 다음과 같습니다.
+
+```json
+{
+  "hooks": {
+    "onComplete": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 complete",
+    "onError": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 error",
+    "onPermissionRequest": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 permission",
+    "onInputRequired": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 input"
   }
 }
 ```
