@@ -12,7 +12,13 @@ if not defined PS_EXE (
 )
 
 if not defined PS_EXE (
-    echo toast4opencode.cmd: neither 'pwsh' nor 'powershell' was found in PATH. 1>&2
+    if exist "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" (
+        set "PS_EXE=C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+    )
+)
+
+if not defined PS_EXE (
+    echo toast4opencode.cmd: neither 'pwsh' nor 'powershell' was found in PATH or default location. 1>&2
     exit /b 9009
 )
 
