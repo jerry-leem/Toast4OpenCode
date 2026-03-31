@@ -52,7 +52,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 - 이 단계는 항상 먼저 해야 하는 필수 단계는 아닙니다.
 - PowerShell에서 `toast4opencode.ps1` 실행 시 스크립트 실행이 차단되거나, `running scripts is disabled on this system` 같은 메시지가 나올 때 적용하면 됩니다.
-- `toast4opencode.cmd` 나 OpenCode 훅이 내부적으로 PowerShell 스크립트를 호출할 때도 같은 정책 제한에 걸릴 수 있습니다.
+- `toast4opencode.cmd` 나 OpenCode 플러그인이 내부적으로 PowerShell 스크립트를 호출할 때도 같은 정책 제한에 걸릴 수 있습니다.
 - 이미 회사 정책이나 개인 설정으로 PowerShell 스크립트 실행이 허용되어 있다면 이 단계는 건너뛰어도 됩니다.
 - 예제에서는 `-Scope CurrentUser` 를 사용하므로 현재 로그인한 사용자에게만 적용되고, 시스템 전체 정책을 바꾸지는 않습니다.
 - `RemoteSigned` 는 로컬에서 만든 스크립트는 실행할 수 있게 하고, 인터넷에서 내려받은 스크립트는 서명 여부를 더 엄격하게 보게 하는 비교적 무난한 설정입니다.
@@ -60,7 +60,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 언제 적용하면 좋은가:
 
 - 처음 설치 후 `pwsh -File ...\\toast4opencode.ps1 complete` 테스트에서 실행 정책 오류가 났을 때
-- OpenCode CLI 훅은 등록했는데 실제 이벤트에서 알림이 전혀 뜨지 않고 PowerShell 실행 오류가 보일 때
+- OpenCode CLI 플러그인은 등록했는데 실제 이벤트에서 알림이 전혀 뜨지 않고 PowerShell 실행 오류가 보일 때
 - `cmd.exe` 나 WSL2에서 래퍼를 호출했는데 내부 PowerShell 스크립트 단계에서 막힐 때
 
 언제 굳이 하지 않아도 되는가:
@@ -149,7 +149,7 @@ $cfg | ConvertTo-Json | Set-Content .\setting.json
 
 Windows에서 OpenCode CLI를 설치해 쓰는 경우, 플러그인 파일은 보통 `C:\Users\<사용자이름>\.config\opencode\plugins` 아래에 있습니다. 이 섹션은 그 기준으로 Toast4OpenCode를 연결하는 방법을 설명합니다.
 
-OpenCode 훅 예제는 아래 파일에 들어 있습니다.
+OpenCode 플러그인 예제는 아래 파일에 들어 있습니다.
 
 - `examples/opencode/toast4opencode_win.js`
 - `examples/opencode/toast4opencode_wsl.js`
@@ -242,7 +242,7 @@ C:\tools\Toast4OpenCode\toast4opencode.cmd error "OpenCode 오류" "테스트 �
 실사용 팁:
 
 - Windows OpenCode CLI 설정 경로와 Toast4OpenCode 저장소 경로는 서로 다릅니다. 설정은 `C:\Users\<사용자이름>\.config\opencode\`, 실제 알림 스크립트는 `C:\tools\Toast4OpenCode` 같은 별도 위치에 둔다고 생각하면 됩니다.
-- OpenCode를 항상 같은 위치에서 실행하지 않는다면 훅 명령에 절대경로를 쓰는 편이 더 안정적입니다.
+- OpenCode를 항상 같은 위치에서 실행하지 않는다면 플러그인 명령에 절대경로를 쓰는 편이 더 안정적입니다.
 - WSL2에서는 저장소를 `/mnt/c/...` 아래에 두면 Windows 쪽 PowerShell이 스크립트를 찾기 쉽습니다.
 - OpenCode가 백그라운드 작업을 자주 만들면 `complete` 는 끄고 `error`, `permission`, `input` 만 남기는 구성이 더 실용적일 수 있습니다.
 
@@ -270,7 +270,7 @@ C:\tools\Toast4OpenCode\toast4opencode.cmd error "OpenCode 오류" "테스트 �
 - Direct PowerShell execution plus wrappers for `cmd.exe` and WSL2
 - No external PowerShell module download required
 - Automatically registers a per-user Start Menu shortcut so unpackaged Windows toast notifications work
-- Sample OpenCode hook configs for each shell style
+- Sample OpenCode plugin configs for each shell style
 
 ## Repository Layout
 
@@ -316,7 +316,7 @@ Notes:
 
 - This step is not always required.
 - Apply it when PowerShell blocks `toast4opencode.ps1` and you see messages such as `running scripts is disabled on this system`.
-- The same policy restriction can also affect `toast4opencode.cmd` and OpenCode hooks because they eventually invoke a PowerShell script.
+- The same policy restriction can also affect `toast4opencode.cmd` and OpenCode plugins because they eventually invoke a PowerShell script.
 - If PowerShell scripts already run correctly in your environment, you can skip this step.
 - The example uses `-Scope CurrentUser`, so it affects only the current Windows user and does not change the machine-wide policy.
 - `RemoteSigned` is a practical default: locally created scripts can run, while downloaded scripts are treated more strictly.
@@ -324,7 +324,7 @@ Notes:
 When you should do this:
 
 - Your first `pwsh -File ...\toast4opencode.ps1 complete` test fails with an execution-policy error
-- OpenCode hooks are configured, but notifications never appear because the underlying PowerShell script is blocked
+- OpenCode plugins are configured, but notifications never appear because the underlying PowerShell script is blocked
 - `cmd.exe` or WSL2 wrappers launch, but fail when the PowerShell stage starts
 
 When you may not need it:
@@ -423,13 +423,12 @@ chmod +x ./toast4opencode
 
 ## OpenCode Examples
 
-For a typical Windows OpenCode CLI setup, the config files usually live under `C:\Users\<your-user>\.config\opencode\`. This section explains how to wire Toast4OpenCode into that layout.
+For a typical Windows OpenCode CLI setup, the plugin files usually live under `C:\Users\<your-user>\.config\opencode\pulgins`. This section explains how to wire Toast4OpenCode into that layout.
 
-Sample hook files:
+Sample plugin files:
 
-- `examples/opencode/opencode.powershell.json`
-- `examples/opencode/opencode.cmd.json`
-- `examples/opencode/opencode.wsl.json`
+- `examples/opencode/toast4opencode_win.js`
+- `examples/opencode/toast4opencode_wsl.js`
 
 If OpenCode CLI is already installed, use this sequence:
 
@@ -440,92 +439,76 @@ If OpenCode CLI is already installed, use this sequence:
 
 2. Decide which shell normally runs OpenCode.
 
-- PowerShell: use the PowerShell-style hook commands
-- `cmd.exe`: use the `toast4opencode.cmd` wrapper
-- WSL2: use the `/mnt/c/.../toast4opencode` wrapper
+- PowerShell or `cmd.exe` : Save the toast4opencode_win.js file in `C:\Users\<username>\.config\opencode\plugins`.
+- WSL2 :  Save the toast4opencode_wsl.js file in `/home/<USERNAME>/.config/opencode/plugins`.
 
-3. Open the active OpenCode config file under `C:\Users\<your-user>\.config\opencode\`.
-
-- If you already have an OpenCode config, merge only the `hooks` section.
-- If you split config across multiple files, update the file OpenCode actually reads.
-- The exact filename can vary; the important part is adding the Toast4OpenCode commands to the `hooks` object.
-
-4. Use absolute paths in those hook commands.
+3. Replace the installed full path inside either `toas4opencode_wsl.js` or `toast4opencode_win.js` and save the file.
 
 - OpenCode may run from many different project directories, so `.\scripts\...` is fragile.
 - A path like `C:\\tools\\Toast4OpenCode\\...` is stable even when your current working directory changes.
 
-5. Test Toast4OpenCode by itself before wiring it into OpenCode.
 
-PowerShell:
+Windows PowerShell (`cmd.exe`):
 
 ```powershell
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 complete
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 error "OpenCode error" "Test notification"
-```
-
-`cmd.exe`:
-
-```bat
-C:\tools\Toast4OpenCode\toast4opencode.cmd complete
-C:\tools\Toast4OpenCode\toast4opencode.cmd error "OpenCode error" "Test notification"
+...
+import { execFile } from "child_process"
+ 
+const TOAST_CMD = "D:\\UTIL\\Toast4OpenCode\\toast4opencode.cmd"
+ 
+const EVENT_MAP = {
+  "session.idle":     "complete",
+  "session.error":    "error",
+  "permission.asked": "permission",
+  "question":         "input",
+}
+...
 ```
 
 WSL2:
 
 ```bash
+...
+import { execFile } from "child_process"
+ 
+const TOAST_CMD = "/mnt/d/UTIL/Toast4OpenCode/toast4opencode"
+ 
+const EVENT_MAP = {
+  "session.idle":     "complete",
+  "session.error":    "error",
+  "permission.asked": "permission",
+  "question":         "input",
+}
+...
+```
+
+4. Test Toast4OpenCode by itself before wiring it into OpenCode.
+
+PowerShell:
+```powershell
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 complete
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 error "OpenCode 오류" "테스트 알림"
+```
+
+cmd.exe:
+```shell
+C:\tools\Toast4OpenCode\toast4opencode.cmd complete
+C:\tools\Toast4OpenCode\toast4opencode.cmd error "OpenCode 오류" "테스트 알림"
+```
+
+WSL2:
+```bash
 /mnt/c/tools/Toast4OpenCode/toast4opencode complete
-/mnt/c/tools/Toast4OpenCode/toast4opencode error "OpenCode error" "Test notification"
+/mnt/c/tools/Toast4OpenCode/toast4opencode error "OpenCode 오류" "테스트 알림"
 ```
 
-6. After standalone testing works, add the hooks to the OpenCode config.
-
-Recommended PowerShell-oriented hook setup:
-
-```json
-{
-  "hooks": {
-    "onComplete": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 complete",
-    "onError": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 error",
-    "onPermissionRequest": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 permission",
-    "onInputRequired": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\\\tools\\\\Toast4OpenCode\\\\scripts\\\\toast4opencode.ps1 input"
-  }
-}
-```
-
-`cmd.exe`-oriented hook setup:
-
-```json
-{
-  "hooks": {
-    "onComplete": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd complete",
-    "onError": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd error",
-    "onPermissionRequest": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd permission",
-    "onInputRequired": "C:\\\\tools\\\\Toast4OpenCode\\\\toast4opencode.cmd input"
-  }
-}
-```
-
-WSL2-oriented hook setup:
-
-```json
-{
-  "hooks": {
-    "onComplete": "/mnt/c/tools/Toast4OpenCode/toast4opencode complete",
-    "onError": "/mnt/c/tools/Toast4OpenCode/toast4opencode error",
-    "onPermissionRequest": "/mnt/c/tools/Toast4OpenCode/toast4opencode permission",
-    "onInputRequired": "/mnt/c/tools/Toast4OpenCode/toast4opencode input"
-  }
-}
-```
-
-7. Run real OpenCode tasks and verify that the hooks fire on actual events.
+5. Run real OpenCode tasks and verify that the plugins fire on actual events.
 
 - Run a short task and confirm the completion toast appears
 - Trigger a failure to confirm the error toast appears
-- Trigger a permission request or input prompt to verify those hooks
+- Trigger a permission request or input prompt to verify those plugins
 
-8. Tune noise level in `C:\tools\Toast4OpenCode\setting.json`.
+6. Tune noise level in `C:\tools\Toast4OpenCode\setting.json`.
 
 - Set `"complete": false` if completion toasts are too noisy
 - Set `"sound": false` if you want visual toasts without sound
@@ -535,7 +518,7 @@ WSL2-oriented hook setup:
 Practical tips:
 
 - The OpenCode config directory and the Toast4OpenCode repository are separate locations. Think of config under `C:\Users\<your-user>\.config\opencode\` and the notifier itself under `C:\tools\Toast4OpenCode`.
-- Absolute paths are more reliable than relative paths for OpenCode hooks.
+- Absolute paths are more reliable than relative paths for OpenCode plugins.
 - For WSL2, keeping the repository under `/mnt/c/...` makes it easier for Windows PowerShell to reach the script.
 - If OpenCode runs many background tasks, keeping only `error`, `permission`, and `input` enabled can be more practical than enabling every completion toast.
 
