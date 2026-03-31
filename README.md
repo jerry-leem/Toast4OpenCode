@@ -65,7 +65,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 언제 굳이 하지 않아도 되는가:
 
-- `pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File ...` 방식으로 이미 정상 실행되고 있을 때
+- `pwsh` 또는 `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ...` 방식으로 이미 정상 실행되고 있을 때
 - 조직 보안 정책상 실행 정책을 변경하면 안 되는 환경일 때
 - 이미 사용자 범위 또는 시스템 범위에서 적절한 정책이 설정되어 있을 때
 
@@ -75,7 +75,7 @@ PowerShell:
 
 ```powershell
 pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 complete
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 error "OpenCode 오류" "현재 작업이 실패했습니다"
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 error "OpenCode 오류" "현재 작업이 실패했습니다"
 ```
 
 `cmd.exe`:
@@ -209,7 +209,7 @@ const EVENT_MAP = {
 
 ```powershell
 pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 complete
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 error "OpenCode 오류" "테스트 알림"
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 error "OpenCode 오류" "테스트 알림"
 ```
 
 - `cmd.exe`:
@@ -386,16 +386,16 @@ Example: disable completion toasts and all sounds
 
 ```powershell
 pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 complete
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 error "OpenCode error" "Build failed"
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 permission "Permission needed" "Approve filesystem access"
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 input "Input needed" "OpenCode is waiting for your answer"
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 sound "Attention" "Check the terminal" -Sound Alarm
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 error "OpenCode error" "Build failed"
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 permission "Permission needed" "Approve filesystem access"
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 input "Input needed" "OpenCode is waiting for your answer"
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\toast4opencode.ps1 sound "Attention" "Check the terminal" -Sound Alarm
 ```
 
 Use a custom config file:
 
 ```powershell
-pwsh -File .\scripts\toast4opencode.ps1 complete -ConfigPath .\setting.json
+powershell -File .\scripts\toast4opencode.ps1 complete -ConfigPath .\setting.json
 ```
 
 ### `cmd.exe`
@@ -487,7 +487,7 @@ const EVENT_MAP = {
 PowerShell:
 ```powershell
 pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 complete
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 error "OpenCode 오류" "테스트 알림"
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\tools\Toast4OpenCode\scripts\toast4opencode.ps1 error "OpenCode 오류" "테스트 알림"
 ```
 
 cmd.exe:
