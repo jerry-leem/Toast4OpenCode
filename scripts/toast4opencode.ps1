@@ -332,11 +332,11 @@ function Invoke-TaskbarFlash {
     $flashInfo.uCount = $Count
     $flashInfo.dwTimeout = 0
 
-    $flashed = [Toast4OpenCode.Win32]::FlashWindowEx([ref]$flashInfo)
-    if (-not $flashed) {
-        Write-Warning "toast4opencode: taskbar flash requested but FlashWindowEx reported no visible effect"
-    }
-    return $flashed
+    # FlashWindowEx return value indicates the window's prior active state,
+    # not whether the flash succeeded. Discard it; the call always performs
+    # the flash when a valid handle is provided.
+    [void][Toast4OpenCode.Win32]::FlashWindowEx([ref]$flashInfo)
+    return $true
 }
 
 function Get-SoundUri {
