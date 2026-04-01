@@ -166,7 +166,7 @@ OpenCode CLI가 이미 설치되어 있다면, 실제 적용 순서는 아래처
 - PowerShell, `cmd.exe` 에서 OpenCode를 실행한다면 `toast4opencode_win.js` 파일을 `C:\Users\<사용자이름>\.config\opencode\plugins` 에 저장
 - WSL2에서 OpenCode를 실행한다면 `toast4opencode_wsl.js` 파일을 `/home/USERNAME/.config/opencode/plugins` 에 저장
 
-3. `toas4opencode_wsl.js`이나 `toast4opencode_win.js` 파일 내용 중 설치된 절대 경로를 바꿔서 저장합니다.
+3. `toast4opencode_wsl.js`이나 `toast4opencode_win.js` 파일 내용 중 설치된 절대 경로를 바꿔서 저장합니다.
 
 - OpenCode는 다양한 작업 디렉토리에서 실행될 수 있으므로 `.\scripts\...` 같은 상대경로보다 `C:\\tools\\Toast4OpenCode\\...` 같은 절대경로가 더 안정적입니다.
 - 특히 OpenCode 설정 파일이 `C:\Users\<사용자이름>\.config\opencode\` 아래에 있어도, 실제 작업 디렉토리는 프로젝트마다 달라질 수 있습니다.
@@ -253,7 +253,8 @@ C:\tools\Toast4OpenCode\toast4opencode.cmd error "OpenCode 오류" "테스트 �
 - `sound` 가 `false` 이면 일반 알림도 무음으로 전송되고 `sound` 이벤트도 사실상 비활성화됩니다.
 - `taskbarFlash` 는 이벤트별 객체입니다. 예를 들어 `taskbarFlash.error` 만 `true` 로 두면 오류 때만 작업표시줄 깜빡임을 요청합니다.
 - 이전 단일 불리언 형식인 `"taskbarFlash": true` 도 호환 차원에서 계속 읽습니다.
-- 콘솔 창 핸들을 찾지 못하는 환경에서는 작업표시줄 깜빡임은 조용히 건너뜁니다.
+- 작업표시줄 깜빡임은 현재 포그라운드 창(예: Windows Terminal)을 먼저 대상으로 시도하고, 없으면 콘솔 창 핸들로 폴백합니다. 둘 다 없으면 경고 메시지를 출력하고 건너뜁니다. 깜빡임 결과는 출력 메시지에 `(taskbar flash applied)` 또는 `(taskbar flash unavailable)` 로 구분됩니다.
+- WSL2에서 이벤트가 빠르게 연속 발생해도 알림이 순서대로 전달됩니다. 플러그인 내부에서 직렬화 큐를 사용하므로 한꺼번에 몰려서 오는 현상이 발생하지 않습니다.
 - 이 프로젝트는 외부 다운로드 없이 동작하도록 되어 있지만, Windows 자체에서 `System.Windows.Forms` 와 `System.Drawing` 을 사용할 수 있는 기본 .NET Desktop 구성은 필요합니다.
 - 기본 경로에서는 Windows 토스트 API를 사용하고, 매우 제한적인 환경에서만 레거시 풍선 알림으로 폴백합니다.
 
@@ -442,7 +443,7 @@ If OpenCode CLI is already installed, use this sequence:
 - PowerShell or `cmd.exe` : Save the toast4opencode_win.js file in `C:\Users\<username>\.config\opencode\plugins`.
 - WSL2 :  Save the toast4opencode_wsl.js file in `/home/<USERNAME>/.config/opencode/plugins`.
 
-3. Replace the installed full path inside either `toas4opencode_wsl.js` or `toast4opencode_win.js` and save the file.
+3. Replace the installed full path inside either `toast4opencode_wsl.js` or `toast4opencode_win.js` and save the file.
 
 - OpenCode may run from many different project directories, so `.\scripts\...` is fragile.
 - A path like `C:\\tools\\Toast4OpenCode\\...` is stable even when your current working directory changes.
@@ -554,6 +555,7 @@ python3 -c "import json, pathlib; p = pathlib.Path('setting.json'); d = json.loa
 
 - If WSL2 cannot start a notification, verify that `pwsh.exe` or `powershell.exe` is callable from WSL2 and that the repository path is reachable from Windows.
 - If notifications appear without sound, confirm `sound` is `true` in `setting.json` and that you did not pass `-Silent`.
-- If taskbar flashing does not happen, verify that the notifier is running in a Windows console session with an accessible window handle. Some host environments can still show a notification while skipping the flash call.
+- If taskbar flashing does not happen, the script now tries the foreground window (e.g. Windows Terminal) first, then falls back to the console window handle. If neither is available, a warning is printed and the flash is skipped. The output line will say `(taskbar flash unavailable)` when this happens.
+- Under WSL2, rapid successive events are serialized through an internal queue in the plugin, so toasts always arrive in order and never burst all at once.
 - If notification display fails on a very minimal Windows image, confirm that `System.Windows.Forms` and `System.Drawing` are available in PowerShell.
 - If native toast registration fails for some reason, the script falls back to a legacy balloon notification so you still get a visible alert.
