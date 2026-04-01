@@ -151,8 +151,8 @@ Windows에서 OpenCode CLI를 설치해 쓰는 경우, 플러그인 파일은 �
 
 OpenCode 플러그인 예제는 아래 파일에 들어 있습니다.
 
-- `examples/opencode/toast4opencode_win.js`
-- `examples/opencode/toast4opencode_wsl.js`
+- `examples/plugins/toast4opencode_win.js`
+- `examples/plugins/toast4opencode_wsl.js`
 
 OpenCode CLI가 이미 설치되어 있다면, 실제 적용 순서는 아래처럼 진행하면 됩니다.
 
@@ -281,7 +281,7 @@ Toast4OpenCode/
 |- toast4opencode.cmd
 |- toast4opencode
 |- setting.json
-`- examples/opencode/
+`- examples/plugins/
 ```
 
 ## Requirements
@@ -428,8 +428,8 @@ For a typical Windows OpenCode CLI setup, the plugin files usually live under `C
 
 Sample plugin files:
 
-- `examples/opencode/toast4opencode_win.js`
-- `examples/opencode/toast4opencode_wsl.js`
+- `examples/plugins/toast4opencode_win.js`
+- `examples/plugins/toast4opencode_wsl.js`
 
 If OpenCode CLI is already installed, use this sequence:
 
