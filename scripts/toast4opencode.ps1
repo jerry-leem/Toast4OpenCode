@@ -74,6 +74,9 @@ namespace Toast4OpenCode {
         public static extern IntPtr GetConsoleWindow();
 
         [DllImport("user32.dll")]
+        public static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
     }
@@ -309,8 +312,16 @@ function Invoke-TaskbarFlash {
         [uint32]$Count = 3
     )
 
-    $windowHandle = [Toast4OpenCode.Win32]::GetConsoleWindow()
+    # Prefer the foreground window — in WSL the helper process has no visible
+    # taskbar button, so GetConsoleWindow() returns Zero or targets the wrong
+    # window. GetForegroundWindow() reliably returns the terminal the user is
+    # actually watching (e.g. Windows Terminal running WSL).
+    $windowHandle = [Toast4OpenCode.Win32]::GetForegroundWindow()
     if ($windowHandle -eq [IntPtr]::Zero) {
+        $windowHandle = [Toast4OpenCode.Win32]::GetConsoleWindow()
+    }
+    if ($windowHandle -eq [IntPtr]::Zero) {
+        Write-Warning "toast4opencode: taskbar flash skipped — no target window handle found"
         return $false
     }
 
@@ -321,8 +332,11 @@ function Invoke-TaskbarFlash {
     $flashInfo.uCount = $Count
     $flashInfo.dwTimeout = 0
 
-    [void][Toast4OpenCode.Win32]::FlashWindowEx([ref]$flashInfo)
-    return $true
+    $flashed = [Toast4OpenCode.Win32]::FlashWindowEx([ref]$flashInfo)
+    if (-not $flashed) {
+        Write-Warning "toast4opencode: taskbar flash requested but FlashWindowEx reported no visible effect"
+    }
+    return $flashed
 }
 
 function Get-SoundUri {
@@ -516,10 +530,15 @@ try {
     Send-WindowsNotification -NotificationTitle $Title -NotificationMessage $Message -EventName $Event -SoundName $Sound -SoundEnabled $soundEnabled -SilentRequested $Silent.IsPresent
 
     if ($taskbarFlashEnabled) {
-        [void](Invoke-TaskbarFlash)
+        $flashed = Invoke-TaskbarFlash
+        if ($flashed) {
+            Write-Output "toast4opencode: sent '$Event' notification (taskbar flash applied)"
+        } else {
+            Write-Output "toast4opencode: sent '$Event' notification (taskbar flash unavailable)"
+        }
+    } else {
+        Write-Output "toast4opencode: sent '$Event' notification"
     }
-
-    Write-Output "toast4opencode: sent '$Event' notification"
 }
 catch {
     Write-ExitError "Failed to send Windows notification.`n$($_.Exception.Message)" 4

@@ -12,12 +12,21 @@ const EVENT_MAP = {
   "question":         "input",
 }
  
+// Serialize notifications so rapid events don't launch concurrent pwsh.exe
+// processes over the WSL bridge (which causes out-of-order / burst delivery).
+let _notifyChain = Promise.resolve()
+
 function notify(arg) {
-  execFile(TOAST_CMD, [arg], { timeout: 15000 }, (err) => {
-    if (err) console.error("[toast4opencode]", err.message)
-  })
+  _notifyChain = _notifyChain.then(
+    () => new Promise((resolve) => {
+      execFile(TOAST_CMD, [arg], { timeout: 15000 }, (err) => {
+        if (err) console.error("[toast4opencode]", err.message)
+        resolve()
+      })
+    })
+  )
 }
- 
+
 export const Toast4OpenCode = async () => {
   return {
     event: async ({ event }) => {
